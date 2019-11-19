@@ -18,6 +18,7 @@ namespace NetBattle.Test {
         public void TestSfe() {
             var testInstance = new SfeTest(Owner.Default);
             testInstance.RegisterScript(@"
+konno = ""yuuki""
 function add(a,b)
     return a + b
 end
@@ -27,6 +28,7 @@ end
 ");
             Assert.AreEqual(3.0, testInstance.RunScript<double, int, int>("add", 1, 2));
             Assert.AreEqual("arhan", testInstance.RunScript<string>("retstr"));
+            Assert.AreEqual("yuuki", testInstance.Script.Globals["konno"]);
         }
 
         private class SfeTest : ScriptFieldEntity {
