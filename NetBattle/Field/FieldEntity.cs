@@ -13,19 +13,39 @@ namespace NetBattle.Field {
         public Position Position { get; protected set; }
         public VisualState VisualState { get; protected set; }
         public InputTarget InputTarget { get; protected set; }
-        public HitBox HitBox { get; protected set; }
+
+        public HitBox HitBox {
+            get => _hitBox;
+            protected set => SetHitBox(value);
+        }
+
+        public ICollection<Cell2> WarnCells {
+            get => _warnCells;
+            protected set => SetWarnCells(value);
+        }
+
         public Health Health { get; protected set; }
+        private HitBox _hitBox;
+        private ICollection<Cell2> _warnCells;
 
         protected readonly HashSet<IFieldEventHandler> EventHandlers = new HashSet<IFieldEventHandler>();
 
-        public FieldEntity ResolveTopEntity() {
-            return Parent == null ? this : Parent.ResolveTopEntity();
-        }
-
+        public FieldEntity ResolveTopEntity() => Parent == null ? this :
+            Parent != this ? Parent.ResolveTopEntity() : throw new Exception("Cyclical entity chain");
 
         protected FieldEntity(Owner owner, FieldEntity parent = null) {
             Owner = owner;
             Parent = parent;
+        }
+
+        private void SetHitBox(HitBox hitBox) {
+            if (Manager?.EntityHitBoxChange(this, _hitBox, hitBox) ?? false)
+                _hitBox = hitBox;
+        }
+
+        private void SetWarnCells(ICollection<Cell2> warnCells) {
+            Manager?.EntityWarnCellChange(this, _warnCells, warnCells);
+            _warnCells = warnCells;
         }
 
         /// <summary>

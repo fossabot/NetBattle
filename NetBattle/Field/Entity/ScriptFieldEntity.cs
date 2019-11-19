@@ -1,15 +1,39 @@
 ﻿using System;
+using System.Collections.Generic;
 using MoonSharp.Interpreter;
 using NetBattle.Structure;
 
 namespace NetBattle.Field.Entity {
     public abstract class ScriptFieldEntity : FieldEntity {
+        private static readonly Type[] DefaultTypes = {
+            typeof(ScriptFieldEntity),
+            typeof(FieldEntity),
+            typeof(FieldEvent),
+            typeof(FieldManager),
+            typeof(Health),
+            typeof(IFieldEventHandler),
+            typeof(InputTarget),
+            typeof(Cell2),
+            typeof(FVector3),
+            typeof(HitBox),
+            typeof(InputEvent),
+            typeof(Owner),
+            typeof(Position),
+            typeof(Sound),
+            typeof(VisualState),
+        };
+
         static ScriptFieldEntity() {
-            UserData.RegisterType(typeof(ScriptFieldEntity));
+            MsRegisterTypes(DefaultTypes);
         }
 
-        public const string ScriptKeyControlPhase = "ControlPhase";
-        public const string ScriptKeyUpdatePhase = "UpdatePhase";
+        public static void MsRegisterTypes(IEnumerable<Type> types) {
+            if (types == null)
+                throw new ArgumentNullException(nameof(types));
+            foreach (var type in types)
+                UserData.RegisterType(type);
+        }
+
         public const string ScriptKeyEntity = "entity";
         public const string ScriptKeyManager = "manager";
         public readonly Script Script;
@@ -39,16 +63,16 @@ namespace NetBattle.Field.Entity {
         public void RegisterFunction<TR>(string name, Func<TR> function) =>
             Script.Globals[name] = function;
 
-        public void RegisterFunction<TR, T1>(string name, Func<TR, T1> function) =>
+        public void RegisterFunction<T1, TR>(string name, Func<T1, TR> function) =>
             Script.Globals[name] = function;
 
-        public void RegisterFunction<TR, T1, T2>(string name, Func<TR, T1, T2> function) =>
+        public void RegisterFunction<T1, T2, TR>(string name, Func<T1, T2, TR> function) =>
             Script.Globals[name] = function;
 
-        public void RegisterFunction<TR, T1, T2, T3>(string name, Func<TR, T1, T2, T3> function) =>
+        public void RegisterFunction<T1, T2, T3, TR>(string name, Func<T1, T2, T3, TR> function) =>
             Script.Globals[name] = function;
 
-        public void RegisterFunction<TR, T1, T2, T3, T4>(string name, Func<TR, T1, T2, T3, T4> function) =>
+        public void RegisterFunction<T1, T2, T3, T4, TR>(string name, Func<T1, T2, T3, T4, TR> function) =>
             Script.Globals[name] = function;
 
         public void RunVoidScript(string script) {

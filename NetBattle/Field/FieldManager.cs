@@ -4,10 +4,12 @@ using NetBattle.Structure;
 
 namespace NetBattle.Field {
     public sealed class FieldManager {
-        public float Time { get; private set; }
-        public float DeltaTime { get; private set; }
+        public int Width { get; }
+        public int Height { get; }
         public IEnumerable<Tuple<Owner, bool>> ControlFilter { get; set; }
         public IEnumerable<Tuple<Owner, bool>> UpdateFilter { get; set; }
+        public float Time { get; private set; }
+        public float DeltaTime { get; private set; }
 
         private readonly HashSet<FieldEntity> _fieldEntities = new HashSet<FieldEntity>();
         private readonly Dictionary<Guid, FieldEntity> _fieldEntitiesGuid = new Dictionary<Guid, FieldEntity>();
@@ -17,6 +19,10 @@ namespace NetBattle.Field {
 
         private readonly Queue<FieldEntity> _regQueue = new Queue<FieldEntity>();
         private readonly Queue<FieldEntity> _deregQueue = new Queue<FieldEntity>();
+        private readonly Dictionary<long, FieldEntity> _gridEntities = new Dictionary<long, FieldEntity>();
+
+        private readonly Dictionary<long, HashSet<FieldEntity>> _gridWarnCells =
+            new Dictionary<long, HashSet<FieldEntity>>();
 
         public void QueueRegistration(FieldEntity entity) => _regQueue.Enqueue(entity);
         public void QueueDeregistration(FieldEntity entity) => _deregQueue.Enqueue(entity);
@@ -26,6 +32,36 @@ namespace NetBattle.Field {
         public delegate void SoundPauseHandler(Sound sound);
 
         public delegate void SoundStopHandler(Sound sound);
+
+        public FieldManager(int width, int height) {
+            Width = width;
+            Height = height;
+        }
+
+        public bool EntityHitBoxChange(FieldEntity entity, HitBox previousHitBox, HitBox targetHitBox) {
+            var targetPos = (long) targetHitBox.Position;
+            if (_gridEntities.TryGetValue(targetPos, out var res))
+                return res == entity;
+            _gridEntities.Remove((long) previousHitBox.Position);
+            _gridEntities[targetPos] = entity;
+            return true;
+        }
+
+        public void EntityWarnCellChange(FieldEntity entity, ICollection<Cell2> previousWarnCells,
+            ICollection<Cell2> targetWarnCells) {
+            foreach (var cell in previousWarnCells) {
+                if (!_gridWarnCells.TryGetValue((long) cell, out var set)) continue;
+                set.Remove(entity);
+                if (set.Count == 0)
+                    _gridWarnCells.Remove((long) cell);
+            }
+
+            foreach (var cell in targetWarnCells) {
+                if (!_gridWarnCells.TryGetValue((long) cell, out var set))
+                    set = _gridWarnCells[(long) cell] = new HashSet<FieldEntity>();
+                set.Add(entity);
+            }
+        }
 
         private void AddFieldEntity(FieldEntity entity) {
             _fieldEntities.Add(entity);
@@ -44,6 +80,7 @@ namespace NetBattle.Field {
             ClearFieldEntityOwner(entity);
             _fieldEntities.Remove(entity);
             _fieldEntitiesGuid.Remove(entity.Id);
+            // TODO remove from grid
         }
 
         public void UpdateFieldEntityOwner(FieldEntity entity, Owner newOwner) {

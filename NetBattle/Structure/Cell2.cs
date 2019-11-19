@@ -7,5 +7,7 @@ namespace NetBattle.Structure {
             X = x;
             Y = y;
         }
+
+        public static explicit operator long(Cell2 c) => ((long) c.X << 32) + c.Y;
     }
 }
