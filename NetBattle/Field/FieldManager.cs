@@ -19,7 +19,10 @@ namespace NetBattle.Field {
 
         private readonly Queue<FieldEntity> _regQueue = new Queue<FieldEntity>();
         private readonly Queue<FieldEntity> _deregQueue = new Queue<FieldEntity>();
-        private readonly Dictionary<long, FieldEntity> _gridEntities = new Dictionary<long, FieldEntity>();
+        private readonly Dictionary<long, FieldEntity> _gridPrimaryEntities = new Dictionary<long, FieldEntity>();
+
+        private readonly Dictionary<long, HashSet<FieldEntity>> _gridEntities =
+            new Dictionary<long, HashSet<FieldEntity>>();
 
         private readonly Dictionary<long, HashSet<FieldEntity>> _gridWarnCells =
             new Dictionary<long, HashSet<FieldEntity>>();
@@ -38,35 +41,37 @@ namespace NetBattle.Field {
             Height = height;
         }
 
-        public bool EntityHitBoxChange(FieldEntity entity, HitBox previousHitBox, HitBox targetHitBox) {
+        internal bool EntityHitBoxChange(FieldEntity entity, HitBox previousHitBox, HitBox targetHitBox) {
+            if (entity.Manager != this) return false;
             var targetPos = (long) targetHitBox.Position;
-            if (_gridEntities.TryGetValue(targetPos, out var res))
+            if (targetHitBox.Primary && _gridPrimaryEntities.TryGetValue(targetPos, out var res))
                 return res == entity;
-            _gridEntities.Remove((long) previousHitBox.Position);
-            _gridEntities[targetPos] = entity;
+            RemoveEntityFromGrid(previousHitBox, entity);
+            AddEntityToGrid(targetHitBox, entity);
             return true;
         }
 
-        public void EntityWarnCellChange(FieldEntity entity, ICollection<Cell2> previousWarnCells,
+        internal void EntityWarnCellChange(FieldEntity entity, ICollection<Cell2> previousWarnCells,
             ICollection<Cell2> targetWarnCells) {
-            foreach (var cell in previousWarnCells) {
-                if (!_gridWarnCells.TryGetValue((long) cell, out var set)) continue;
-                set.Remove(entity);
-                if (set.Count == 0)
-                    _gridWarnCells.Remove((long) cell);
-            }
-
-            foreach (var cell in targetWarnCells) {
-                if (!_gridWarnCells.TryGetValue((long) cell, out var set))
-                    set = _gridWarnCells[(long) cell] = new HashSet<FieldEntity>();
-                set.Add(entity);
-            }
+            if (entity.Manager != this) return;
+            RemoveEntityWarnCells(previousWarnCells, entity);
+            AddEntityWarnCells(targetWarnCells, entity);
         }
 
-        private void AddFieldEntity(FieldEntity entity) {
+        internal void EntityOwnerChange(FieldEntity entity, Owner previousOwner, Owner targetOwner) {
+            if (entity.Manager != this) return;
+            RemoveEntityFromOwnerDict(previousOwner, entity);
+            AddEntityToOwnerDict(targetOwner, entity);
+        }
+
+        private void AddEntity(FieldEntity entity) {
+            if (entity.Manager == this) return;
+            entity.Manager = this;
+            AddEntityToOwnerDict(entity.Owner, entity);
+            AddEntityToGrid(entity.HitBox, entity);
             _fieldEntities.Add(entity);
             _fieldEntitiesGuid.Add(entity.Id, entity);
-            entity.Manager = this;
+            AddEntityWarnCells(entity.WarnCells, entity);
             var bOwner = entity.Owner.BaseName;
             if (_ownerDict.TryGetValue(bOwner, out var entities))
                 entities.Add(entity);
@@ -74,43 +79,81 @@ namespace NetBattle.Field {
                 _ownerDict[bOwner] = new HashSet<FieldEntity> {entity};
         }
 
-        private void RemoveFieldEntity(FieldEntity entity) {
+        private void RemoveEntity(FieldEntity entity) {
             if (entity.Manager != this) return;
             entity.Manager = null;
-            ClearFieldEntityOwner(entity);
+            RemoveEntityFromOwnerDict(entity.Owner, entity);
+            RemoveEntityFromGrid(entity.HitBox, entity);
             _fieldEntities.Remove(entity);
             _fieldEntitiesGuid.Remove(entity.Id);
-            // TODO remove from grid
+            RemoveEntityWarnCells(entity.WarnCells, entity);
+            if (!entity.HitBox.Primary) return;
+            var pos = (long) entity.HitBox.Position;
+            if (_gridPrimaryEntities.TryGetValue(pos, out var gridEntity) && gridEntity == entity)
+                _gridPrimaryEntities.Remove(pos);
         }
 
-        public void UpdateFieldEntityOwner(FieldEntity entity, Owner newOwner) {
-            if (entity.Manager != this) return;
-            if (entity.Owner.BaseName != null)
-                ClearFieldEntityOwner(entity);
-            entity.Owner = newOwner;
-            if (_ownerDict.TryGetValue(newOwner.BaseName, out var entities))
-                entities.Add(entity);
-            else
-                _ownerDict[newOwner.BaseName] = new HashSet<FieldEntity> {entity};
-        }
-
-        private void ClearFieldEntityOwner(FieldEntity entity) {
-            if (entity.Manager != this) return;
-            var empty = new List<string>();
-            foreach (var e in _ownerDict) {
-                e.Value.Remove(entity);
-                if (e.Value.Count == 0)
-                    empty.Add(e.Key);
+        private void AddEntityWarnCells(ICollection<Cell2> warnCells, FieldEntity entity) {
+            if (warnCells == null) return;
+            foreach (var cell in warnCells) {
+                if (!_gridWarnCells.TryGetValue((long) cell, out var set))
+                    set = _gridWarnCells[(long) cell] = new HashSet<FieldEntity>();
+                set.Add(entity);
             }
+        }
 
-            foreach (var e in empty)
-                _ownerDict.Remove(e);
-            entity.Owner = Owner.None;
+        private void RemoveEntityWarnCells(ICollection<Cell2> warnCells, FieldEntity entity) {
+            if (warnCells == null) return;
+            foreach (var cell in warnCells) {
+                if (!_gridWarnCells.TryGetValue((long) cell, out var set)) continue;
+                set.Remove(entity);
+                if (set.Count == 0)
+                    _gridWarnCells.Remove((long) cell);
+            }
+        }
+
+        private void AddEntityToOwnerDict(Owner owner, FieldEntity entity) {
+            if (owner.BaseName == null) return;
+            if (!_ownerDict.TryGetValue(owner.BaseName, out var entities))
+                entities = _ownerDict[owner.BaseName] = new HashSet<FieldEntity>();
+            entities.Add(entity);
+        }
+
+        private void RemoveEntityFromOwnerDict(Owner owner, FieldEntity entity) {
+            if (owner.BaseName == null) return;
+            if (!_ownerDict.TryGetValue(owner.BaseName, out var set)) return;
+            set.Remove(entity);
+            if (set.Count == 0)
+                _ownerDict.Remove(owner.BaseName);
+        }
+
+        private void AddEntityToGrid(HitBox hitBox, FieldEntity entity) {
+            var cell = (long) hitBox.Position;
+            if (!_gridEntities.TryGetValue(cell, out var set))
+                set = _gridEntities[cell] = new HashSet<FieldEntity>();
+            set.Add(entity);
+            if (!hitBox.Primary) return;
+            _gridPrimaryEntities[cell] = entity;
+        }
+
+        private void RemoveEntityFromGrid(HitBox hitBox, FieldEntity entity) {
+            var cell = (long) hitBox.Position;
+            if (!_gridEntities.TryGetValue(cell, out var set)) return;
+            set.Remove(entity);
+            if (set.Count == 0)
+                _gridEntities.Remove(cell);
+            if (hitBox.Primary && _gridPrimaryEntities.TryGetValue(cell, out var res) && res == entity)
+                _gridPrimaryEntities.Remove(cell);
         }
 
         public void DisavowOwner(Owner owner) => _ownerDict.Remove(owner.BaseName);
 
         public FieldEntity FindEntity(Guid id) => _fieldEntitiesGuid.TryGetValue(id, out var res) ? res : null;
+
+        public FieldEntity CheckPrimaryEntity(Cell2 cell) =>
+            _gridPrimaryEntities.TryGetValue((long) cell, out var res) ? res : null;
+
+        public bool CheckWarnCell(Cell2 cell) => _gridWarnCells.ContainsKey((long) cell);
 
         public void QueueInputEvent(InputEvent evt, string owner) {
             if (!_ownerDict.ContainsKey(owner)) return;
@@ -129,12 +172,12 @@ namespace NetBattle.Field {
                 entry.OnEvent(evt);
         }
 
-        public void RunSequence(float time) {
+        public void UpdateField(float time) {
             DeltaTime = time - Time;
             Time = time;
             while (_regQueue.Count != 0) {
                 var ent = _regQueue.Dequeue();
-                AddFieldEntity(ent);
+                AddEntity(ent);
                 ent.RegistrationPhase();
             }
 
@@ -157,13 +200,13 @@ namespace NetBattle.Field {
                     if (!_ownerDict.TryGetValue(filterOwner.BaseName, out var oEntry)) continue;
                     foreach (var entity in oEntry)
                         if (filterAllVariants || entity.Owner.Variant == filterOwner.Variant)
-                            entity.UpdatePhase();
+                            entity.BaseUpdatePhase();
                 }
 
             while (_deregQueue.Count != 0) {
                 var ent = _deregQueue.Dequeue();
                 ent.DeregistrationPhase();
-                RemoveFieldEntity(ent);
+                RemoveEntity(ent);
             }
         }
 

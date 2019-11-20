@@ -4,8 +4,7 @@ using NetBattle.Structure;
 
 namespace NetBattle.Field {
     public abstract class FieldEntity {
-        public FieldManager Manager { get; set; }
-        public Owner Owner { get; set; }
+        public FieldManager Manager { get; internal set; }
         public FieldEntity Parent { get; set; }
 
         public readonly Guid Id = Guid.NewGuid();
@@ -13,6 +12,11 @@ namespace NetBattle.Field {
         public Position Position { get; protected set; }
         public VisualState VisualState { get; protected set; }
         public InputTarget InputTarget { get; protected set; }
+
+        public Owner Owner {
+            get => _owner;
+            protected set => SetOwner(value);
+        }
 
         public HitBox HitBox {
             get => _hitBox;
@@ -25,17 +29,29 @@ namespace NetBattle.Field {
         }
 
         public Health Health { get; protected set; }
+        private Owner _owner;
         private HitBox _hitBox;
         private ICollection<Cell2> _warnCells;
 
         protected readonly HashSet<IFieldEventHandler> EventHandlers = new HashSet<IFieldEventHandler>();
+        protected readonly Dictionary<string, FTimer> Timers = new Dictionary<string, FTimer>();
 
         public FieldEntity ResolveTopEntity() => Parent == null ? this :
             Parent != this ? Parent.ResolveTopEntity() : throw new Exception("Cyclical entity chain");
 
+        protected FieldEntity(FieldEntity parent = null) {
+            Owner = Owner.None;
+            Parent = parent;
+        }
+
         protected FieldEntity(Owner owner, FieldEntity parent = null) {
             Owner = owner;
             Parent = parent;
+        }
+
+        private void SetOwner(Owner owner) {
+            Manager.EntityOwnerChange(this, _owner, owner);
+            _owner = owner;
         }
 
         private void SetHitBox(HitBox hitBox) {
@@ -67,6 +83,14 @@ namespace NetBattle.Field {
         /// </remarks>
         public abstract void ControlPhase();
 
+        internal void BaseUpdatePhase() {
+            if (Manager == null) return;
+            var delta = Manager.DeltaTime;
+            foreach (var e in Timers)
+                e.Value.Update(delta);
+            UpdatePhase();
+        }
+        
         /// <summary>
         /// Standard callback 3/4 - behaviour update
         /// </summary>

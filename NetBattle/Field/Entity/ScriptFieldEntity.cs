@@ -38,8 +38,17 @@ namespace NetBattle.Field.Entity {
         public const string ScriptKeyManager = "manager";
         public readonly Script Script;
 
+        public ScriptFieldEntity(FieldEntity parent = null) : base(parent) {
+            Script = new Script(CoreModules.Preset_HardSandbox);
+        }
+
         public ScriptFieldEntity(Owner owner, FieldEntity parent = null) : base(owner, parent) {
             Script = new Script(CoreModules.Preset_HardSandbox);
+        }
+
+        public void CopySources(ScriptFieldEntity other) {
+            for (var i = 0; i < other.Script.SourceCodeCount; i++)
+                Script.DoString(other.Script.GetSourceCode(i).Code);
         }
 
         public void RegisterScript(string script) =>
