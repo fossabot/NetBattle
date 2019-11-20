@@ -15,7 +15,7 @@ namespace NetBattle.Field {
 
         public Owner Owner {
             get => _owner;
-            protected set => SetOwner(value);
+            set => SetOwner(value);
         }
 
         public HitBox HitBox {
@@ -50,7 +50,7 @@ namespace NetBattle.Field {
         }
 
         private void SetOwner(Owner owner) {
-            Manager.EntityOwnerChange(this, _owner, owner);
+            Manager?.EntityOwnerChange(this, _owner, owner);
             _owner = owner;
         }
 

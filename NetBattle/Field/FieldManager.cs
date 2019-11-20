@@ -30,11 +30,15 @@ namespace NetBattle.Field {
         public void QueueRegistration(FieldEntity entity) => _regQueue.Enqueue(entity);
         public void QueueDeregistration(FieldEntity entity) => _deregQueue.Enqueue(entity);
 
-        public delegate void SoundPlayHandler(Sound sound);
+        public delegate void SoundPlayDelegate(Sound sound);
 
-        public delegate void SoundPauseHandler(Sound sound);
+        public delegate void SoundPauseDelegate(Sound sound);
 
-        public delegate void SoundStopHandler(Sound sound);
+        public delegate void SoundStopDelegate(Sound sound);
+
+        public SoundPlayDelegate SoundPlayHandler;
+        public SoundPauseDelegate SoundPauseHandler;
+        public SoundStopDelegate SoundStopHandler;
 
         public FieldManager(int width, int height) {
             Width = width;
