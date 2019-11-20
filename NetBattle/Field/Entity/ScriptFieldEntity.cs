@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using MoonSharp.Interpreter;
+using MoonSharp.Interpreter.Serialization;
 using NetBattle.Structure;
 
 namespace NetBattle.Field.Entity {
     public abstract class ScriptFieldEntity : FieldEntity {
         private static readonly Type[] DefaultTypes = {
+            typeof(Guid),
             typeof(ScriptFieldEntity),
             typeof(FieldEntity),
             typeof(FieldEvent),
@@ -34,25 +37,48 @@ namespace NetBattle.Field.Entity {
                 UserData.RegisterType(type);
         }
 
+        [MoonSharpHidden]
+        public static void MsHwDump(Stream stream) {
+            using (var writer = new StreamWriter(stream)) {
+                writer.Write(UserData.GetDescriptionOfRegisteredTypes(true).Serialize());
+            }
+        }
+
         public const string ScriptKeyEntity = "entity";
         public const string ScriptKeyManager = "manager";
         public readonly Script Script;
 
-        public ScriptFieldEntity(FieldEntity parent = null) : base(parent) {
-            Script = new Script(CoreModules.Preset_HardSandbox);
+        private const string DefaultScript = @"";
+        private readonly HashSet<string> _scripts = new HashSet<string>();
+
+        protected ScriptFieldEntity(FieldEntity parent = null) : this(Owner.None, parent) {
         }
 
-        public ScriptFieldEntity(Owner owner, FieldEntity parent = null) : base(owner, parent) {
+        protected ScriptFieldEntity(Owner owner, FieldEntity parent = null) : base(owner, parent) {
             Script = new Script(CoreModules.Preset_HardSandbox);
+            RegisterScript(DefaultScript);
+            RegisterFunction<Guid, FieldEntity>("mg_find_entity", MgFindEntity);
+            RegisterFunction<Cell2, FieldEntity>("mg_check_primary_entity", MgCheckPrimaryEntity);
+            RegisterFunction<Cell2, bool>("mg_check_warn_cell", MgCheckWarnCell);
+            RegisterAction<FieldEvent>("mg_send_event", MgSendEvent);
         }
+
+#pragma region FieldManager proxy functions
+        private FieldEntity MgFindEntity(Guid guid) => Manager?.FindEntity(guid);
+        private FieldEntity MgCheckPrimaryEntity(Cell2 cell) => Manager?.CheckPrimaryEntity(cell);
+        private bool MgCheckWarnCell(Cell2 cell) => Manager?.CheckWarnCell(cell) ?? true;
+        private void MgSendEvent(FieldEvent evt) => Manager?.SendEvent(evt);
+#pragma endregion
 
         public void CopySources(ScriptFieldEntity other) {
-            for (var i = 0; i < other.Script.SourceCodeCount; i++)
-                Script.DoString(other.Script.GetSourceCode(i).Code);
+            foreach (var script in other._scripts)
+                RegisterScript(script);
         }
 
-        public void RegisterScript(string script) =>
-            Script.DoString(script);
+        public void RegisterScript(string script) {
+            if (_scripts.Add(script))
+                Script.DoString(script);
+        }
 
         public void RegisterAction(string name, Action action) =>
             Script.Globals[name] = action;
@@ -132,7 +158,7 @@ namespace NetBattle.Field.Entity {
             return (TR) Script.Call(fn).ToObject();
         }
 
-        public TR RunScript<TR, T1>(string script, T1 v1) {
+        public TR RunScript<T1, TR>(string script, T1 v1) {
             Script.Globals[ScriptKeyEntity] = this;
             Script.Globals[ScriptKeyManager] = Manager;
             var fn = Script.Globals.Get(script);
@@ -140,7 +166,7 @@ namespace NetBattle.Field.Entity {
             return (TR) Script.Call(fn, v1).ToObject();
         }
 
-        public TR RunScript<TR, T1, T2>(string script, T1 v1, T2 v2) {
+        public TR RunScript<T1, T2, TR>(string script, T1 v1, T2 v2) {
             Script.Globals[ScriptKeyEntity] = this;
             Script.Globals[ScriptKeyManager] = Manager;
             var fn = Script.Globals.Get(script);
@@ -148,7 +174,7 @@ namespace NetBattle.Field.Entity {
             return (TR) Script.Call(fn, v1, v2).ToObject();
         }
 
-        public TR RunScript<TR, T1, T2, T3>(string script, T1 v1, T2 v2, T3 v3) {
+        public TR RunScript<T1, T2, T3, TR>(string script, T1 v1, T2 v2, T3 v3) {
             Script.Globals[ScriptKeyEntity] = this;
             Script.Globals[ScriptKeyManager] = Manager;
             var fn = Script.Globals.Get(script);
@@ -156,7 +182,7 @@ namespace NetBattle.Field.Entity {
             return (TR) Script.Call(fn, v1, v2, v3).ToObject();
         }
 
-        public TR RunScript<TR, T1, T2, T3, T4>(string script, T1 v1, T2 v2, T3 v3, T4 v4) {
+        public TR RunScript<T1, T2, T3, T4, TR>(string script, T1 v1, T2 v2, T3 v3, T4 v4) {
             Script.Globals[ScriptKeyEntity] = this;
             Script.Globals[ScriptKeyManager] = Manager;
             var fn = Script.Globals.Get(script);

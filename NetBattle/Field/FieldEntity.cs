@@ -9,9 +9,9 @@ namespace NetBattle.Field {
 
         public readonly Guid Id = Guid.NewGuid();
 
-        public Position Position { get; protected set; }
-        public VisualState VisualState { get; protected set; }
-        public InputTarget InputTarget { get; protected set; }
+        public Position Position { get; set; }
+        public VisualState VisualState { get; set; }
+        public InputTarget InputTarget { get; set; }
 
         public Owner Owner {
             get => _owner;
@@ -28,7 +28,7 @@ namespace NetBattle.Field {
             protected set => SetWarnCells(value);
         }
 
-        public Health Health { get; protected set; }
+        public Health Health { get; set; } = new Health();
         private Owner _owner;
         private HitBox _hitBox;
         private ICollection<Cell2> _warnCells;
@@ -39,9 +39,7 @@ namespace NetBattle.Field {
         public FieldEntity ResolveTopEntity() => Parent == null ? this :
             Parent != this ? Parent.ResolveTopEntity() : throw new Exception("Cyclical entity chain");
 
-        protected FieldEntity(FieldEntity parent = null) {
-            Owner = Owner.None;
-            Parent = parent;
+        protected FieldEntity(FieldEntity parent = null) : this(Owner.None, parent) {
         }
 
         protected FieldEntity(Owner owner, FieldEntity parent = null) {
@@ -90,7 +88,7 @@ namespace NetBattle.Field {
                 e.Value.Update(delta);
             UpdatePhase();
         }
-        
+
         /// <summary>
         /// Standard callback 3/4 - behaviour update
         /// </summary>

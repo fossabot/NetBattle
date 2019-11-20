@@ -77,6 +77,7 @@ namespace NetBattle.Field {
             _fieldEntitiesGuid.Add(entity.Id, entity);
             AddEntityWarnCells(entity.WarnCells, entity);
             var bOwner = entity.Owner.BaseName;
+            if (bOwner == null) return;
             if (_ownerDict.TryGetValue(bOwner, out var entities))
                 entities.Add(entity);
             else
