@@ -61,6 +61,10 @@ namespace NetBattle.Field.Entity {
             RegisterFunction<Cell2, FieldEntity>("mg_check_primary_entity", MgCheckPrimaryEntity);
             RegisterFunction<Cell2, bool>("mg_check_warn_cell", MgCheckWarnCell);
             RegisterAction<FieldEvent>("mg_send_event", MgSendEvent);
+            RegisterFunction<string, bool>("nt_has_timer", NtHasTimer);
+            RegisterFunction<string, FTimer>("nt_get_timer", NtGetTimer);
+            RegisterFunction<string, float, FTimer>("nt_add_timer", NtAddTimer);
+            RegisterAction<string>("nt_remove_timer", NtRemoveTimer);
         }
 
 #pragma region FieldManager proxy functions
@@ -68,6 +72,19 @@ namespace NetBattle.Field.Entity {
         private FieldEntity MgCheckPrimaryEntity(Cell2 cell) => Manager?.CheckPrimaryEntity(cell);
         private bool MgCheckWarnCell(Cell2 cell) => Manager?.CheckWarnCell(cell) ?? true;
         private void MgSendEvent(FieldEvent evt) => Manager?.SendEvent(evt);
+#pragma endregion
+
+#pragma region FieldEntity proxy funcitons
+        private bool NtHasTimer(string name) => Timers.ContainsKey(name);
+        private FTimer NtGetTimer(string name) => Timers.TryGetValue(name, out var res) ? res : null;
+
+        private FTimer NtAddTimer(string name, float time) {
+            var timer = new FTimer(time);
+            Timers.Add(name, timer);
+            return timer;
+        }
+
+        private void NtRemoveTimer(string name) => Timers.Remove(name);
 #pragma endregion
 
         public void CopySources(ScriptFieldEntity other) {

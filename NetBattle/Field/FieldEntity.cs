@@ -20,12 +20,12 @@ namespace NetBattle.Field {
 
         public HitBox HitBox {
             get => _hitBox;
-            protected set => SetHitBox(value);
+            set => SetHitBox(value);
         }
 
         public ICollection<Cell2> WarnCells {
             get => _warnCells;
-            protected set => SetWarnCells(value);
+            set => SetWarnCells(value);
         }
 
         public Health Health { get; set; } = new Health();
@@ -33,8 +33,8 @@ namespace NetBattle.Field {
         private HitBox _hitBox;
         private ICollection<Cell2> _warnCells;
 
-        protected readonly HashSet<IFieldEventHandler> EventHandlers = new HashSet<IFieldEventHandler>();
-        protected readonly Dictionary<string, FTimer> Timers = new Dictionary<string, FTimer>();
+        public readonly HashSet<IFieldEventHandler> EventHandlers = new HashSet<IFieldEventHandler>();
+        public readonly Dictionary<string, FTimer> Timers = new Dictionary<string, FTimer>();
 
         public FieldEntity ResolveTopEntity() => Parent == null ? this :
             Parent != this ? Parent.ResolveTopEntity() : throw new Exception("Cyclical entity chain");
