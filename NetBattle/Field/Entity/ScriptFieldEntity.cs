@@ -57,6 +57,8 @@ namespace NetBattle.Field.Entity {
         protected ScriptFieldEntity(Owner owner, FieldEntity parent = null) : base(owner, parent) {
             Script = new Script(CoreModules.Preset_HardSandbox);
             RegisterScript(DefaultScript);
+            RegisterAction<FieldEntity>("mg_queue_registration", MgQueueRegistration);
+            RegisterAction<FieldEntity>("mg_queue_deregistration", MgQueueDeregistration);
             RegisterFunction<Guid, FieldEntity>("mg_find_entity", MgFindEntity);
             RegisterFunction<Cell2, FieldEntity>("mg_check_primary_entity", MgCheckPrimaryEntity);
             RegisterFunction<Cell2, bool>("mg_check_warn_cell", MgCheckWarnCell);
@@ -68,6 +70,8 @@ namespace NetBattle.Field.Entity {
         }
 
 #pragma region FieldManager proxy functions
+        private void MgQueueRegistration(FieldEntity entity) => Manager?.QueueRegistration(entity);
+        private void MgQueueDeregistration(FieldEntity entity) => Manager?.QueueDeregistration(entity);
         private FieldEntity MgFindEntity(Guid guid) => Manager?.FindEntity(guid);
         private FieldEntity MgCheckPrimaryEntity(Cell2 cell) => Manager?.CheckPrimaryEntity(cell);
         private bool MgCheckWarnCell(Cell2 cell) => Manager?.CheckWarnCell(cell) ?? true;

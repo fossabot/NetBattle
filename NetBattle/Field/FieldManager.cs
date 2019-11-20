@@ -182,6 +182,7 @@ namespace NetBattle.Field {
             Time = time;
             while (_regQueue.Count != 0) {
                 var ent = _regQueue.Dequeue();
+                if (ent == null) continue;
                 AddEntity(ent);
                 ent.RegistrationPhase();
             }
@@ -210,6 +211,7 @@ namespace NetBattle.Field {
 
             while (_deregQueue.Count != 0) {
                 var ent = _deregQueue.Dequeue();
+                if (ent == null) continue;
                 ent.DeregistrationPhase();
                 RemoveEntity(ent);
             }
