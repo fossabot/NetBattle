@@ -38,7 +38,7 @@ namespace NetBattle.Structure {
 
         public static FVector3 operator +(FVector3 v) => v;
         public static FVector3 operator -(FVector3 v) => new FVector3(-v.X, -v.Y, -v.Z);
-        public static FVector3 operator +(FVector3 v, FVector3 w) => new FVector3(v.X + w.X, v.Y + w.X, v.Z + w.X);
+        public static FVector3 operator +(FVector3 v, FVector3 w) => new FVector3(v.X + w.X, v.Y + w.Y, v.Z + w.Z);
         public static FVector3 operator -(FVector3 v, FVector3 w) => new FVector3(v.X - w.X, v.Y - w.Y, v.Z - w.Z);
         public static FVector3 operator *(FVector3 v, float f) => new FVector3(v.X * f, v.Y * f, v.Z * f);
         public static FVector3 operator *(float f, FVector3 v) => new FVector3(v.X * f, v.Y * f, v.Z * f);

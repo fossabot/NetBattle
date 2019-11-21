@@ -39,9 +39,6 @@ namespace NetBattle.Field {
         public FieldEntity ResolveTopEntity() => Parent == null ? this :
             Parent != this ? Parent.ResolveTopEntity() : throw new Exception("Cyclical entity chain");
 
-        protected FieldEntity(FieldEntity parent = null) : this(Owner.None, parent) {
-        }
-
         protected FieldEntity(Owner owner, FieldEntity parent = null) {
             Owner = owner;
             Parent = parent;

@@ -1,5 +1,4 @@
 using NetBattle.Field;
-using NetBattle.Field.Entity;
 using NUnit.Framework;
 
 namespace NetBattle.Test {
@@ -74,7 +73,7 @@ end
         }
 
         private class TestScriptFieldEntity : ScriptFieldEntity {
-            public TestScriptFieldEntity(FieldEntity parent = null) : base(parent) {
+            public TestScriptFieldEntity(FieldEntity parent = null) : base(Structure.Owner.None, parent) {
                 Health = new Health();
             }
 
